@@ -266,28 +266,132 @@
 //     </div>
 //   );
 // }
+// import React from "react";
+// import api from "../api";
+
+// export default function PostCard({ post, currentUser, onUpdated }) {
+//   if (!post) return null;
+
+//   const API_BASE = import.meta.env.VITE_API_BASE;
+
+//   // Get author details safely
+//   const author = post.author || post.user || {};
+//   const isOwner = currentUser && author._id === currentUser._id;
+//   const liked = currentUser && post.likes?.includes(currentUser._id);
+
+//   const toggleLike = async () => {
+//     try {
+//       const res = await api.post(`/posts/${post._id}/like`);
+//       onUpdated && onUpdated(res.data); // updates UI immediately
+//     } catch (err) {
+//       console.error("Error liking post:", err);
+//     }
+//   };
+
+//   const deletePost = async () => {
+//     if (!confirm("Delete this post?")) return;
+//     try {
+//       await api.delete(`/posts/${post._id}`);
+//       onUpdated && onUpdated(null, post._id);
+//     } catch (err) {
+//       console.error("Error deleting post:", err);
+//     }
+//   };
+
+//   // ✅ Avatar source using environment variable
+//   const avatarUrl = author.profileImage
+//     ? `${API_BASE}/${author.profileImage}`
+//     : post.user?.profileImage
+//     ? `${API_BASE}/${post.user.profileImage}`
+//     : "https://ui-avatars.com/api/?background=ddd&name=" +
+//       encodeURIComponent(author.name || "User");
+
+//   // ✅ Post image using API_BASE
+//   const imageUrl =
+//     post.image && !post.image.startsWith("http")
+//       ? `${API_BASE}/${post.image}`
+//       : post.image;
+
+//   return (
+//     <div className="bg-white rounded shadow-sm p-4 mb-4">
+//       {/* Post header */}
+//       <div className="flex items-center gap-3 mb-3">
+//         <img
+//           src={avatarUrl}
+//           alt="avatar"
+//           className="w-10 h-10 rounded-full object-cover border"
+//         />
+//         <div>
+//           <div className="font-semibold">{author.name || "Unknown User"}</div>
+//           <div className="text-sm text-gray-500">
+//             {post.createdAt
+//               ? new Date(post.createdAt).toLocaleString()
+//               : "Just now"}
+//           </div>
+//         </div>
+//       </div>
+
+//       {/* Post content */}
+//       {post.text && <p className="mb-3 whitespace-pre-wrap">{post.text}</p>}
+
+//       {/* ✅ Post image */}
+//       {imageUrl && (
+//         <img
+//           src={imageUrl}
+//           alt="Post content"
+//           className="max-h-96 w-full object-cover rounded mb-3"
+//         />
+//       )}
+
+//       {/* Like & Delete */}
+//       <div className="flex items-center gap-4">
+//         <button
+//           onClick={toggleLike}
+//           className={`px-3 py-1 rounded transition ${
+//             post.likes?.includes(currentUser?._id)
+//               ? "bg-blue-600 text-white"
+//               : "bg-gray-100"
+//           }`}
+//         >
+//           👍 Like {post.likes?.length ? `(${post.likes.length})` : ""}
+//         </button>
+
+//         {isOwner && (
+//           <button
+//             onClick={deletePost}
+//             className="px-3 py-1 bg-blue-500 text-white rounded transition"
+//           >
+//             🗑️ Delete
+//           </button>
+//         )}
+//       </div>
+//     </div>
+//   );
+// }
 import React from "react";
 import api from "../api";
 
 export default function PostCard({ post, currentUser, onUpdated }) {
   if (!post) return null;
 
-  const API_BASE = import.meta.env.VITE_API_BASE;
+  // ✅ Clean API_BASE (remove trailing slash if present)
+  const API_BASE = import.meta.env.VITE_API_BASE?.replace(/\/$/, "") || "";
 
-  // Get author details safely
+  // ✅ Safely get author details
   const author = post.author || post.user || {};
   const isOwner = currentUser && author._id === currentUser._id;
-  const liked = currentUser && post.likes?.includes(currentUser._id);
 
+  // ✅ Toggle like
   const toggleLike = async () => {
     try {
       const res = await api.post(`/posts/${post._id}/like`);
-      onUpdated && onUpdated(res.data); // updates UI immediately
+      onUpdated && onUpdated(res.data);
     } catch (err) {
       console.error("Error liking post:", err);
     }
   };
 
+  // ✅ Delete post
   const deletePost = async () => {
     if (!confirm("Delete this post?")) return;
     try {
@@ -298,28 +402,35 @@ export default function PostCard({ post, currentUser, onUpdated }) {
     }
   };
 
-  // ✅ Avatar source using environment variable
-  const avatarUrl = author.profileImage
-    ? `${API_BASE}/${author.profileImage}`
-    : post.user?.profileImage
-    ? `${API_BASE}/${post.user.profileImage}`
-    : "https://ui-avatars.com/api/?background=ddd&name=" +
-      encodeURIComponent(author.name || "User");
+  // ✅ Fix avatar URL (no double slashes, fallback avatar)
+  const avatarPath =
+    author.profileImage || post.user?.profileImage || null;
 
-  // ✅ Post image using API_BASE
+  const avatarUrl = avatarPath
+    ? `${API_BASE}/${avatarPath.replace(/^\/+/, "")}`
+    : `https://ui-avatars.com/api/?background=0D8ABC&color=fff&name=${encodeURIComponent(
+        author.name || "User"
+      )}`;
+
+  // ✅ Fix post image URL similarly
   const imageUrl =
     post.image && !post.image.startsWith("http")
-      ? `${API_BASE}/${post.image}`
-      : post.image;
+      ? `${API_BASE}/${post.image.replace(/^\/+/, "")}`
+      : post.image || null;
 
   return (
     <div className="bg-white rounded shadow-sm p-4 mb-4">
-      {/* Post header */}
+      {/* Post Header */}
       <div className="flex items-center gap-3 mb-3">
         <img
           src={avatarUrl}
           alt="avatar"
           className="w-10 h-10 rounded-full object-cover border"
+          onError={(e) =>
+            (e.target.src = `https://ui-avatars.com/api/?background=ddd&name=${encodeURIComponent(
+              author.name || "User"
+            )}`)
+          }
         />
         <div>
           <div className="font-semibold">{author.name || "Unknown User"}</div>
@@ -331,19 +442,20 @@ export default function PostCard({ post, currentUser, onUpdated }) {
         </div>
       </div>
 
-      {/* Post content */}
+      {/* Post Content */}
       {post.text && <p className="mb-3 whitespace-pre-wrap">{post.text}</p>}
 
-      {/* ✅ Post image */}
+      {/* Post Image */}
       {imageUrl && (
         <img
           src={imageUrl}
           alt="Post content"
           className="max-h-96 w-full object-cover rounded mb-3"
+          onError={(e) => (e.target.style.display = "none")}
         />
       )}
 
-      {/* Like & Delete */}
+      {/* Like & Delete Buttons */}
       <div className="flex items-center gap-4">
         <button
           onClick={toggleLike}
