@@ -10,7 +10,12 @@ dotenv.config();
 const app = express();
 connectDB();
 
-app.use(cors());
+app.use(cors(
+    {
+    origin: ["https://community-nxa8.vercel.app"], // your frontend domain
+    credentials: true,
+  }
+));
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
 
